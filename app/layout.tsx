@@ -12,7 +12,17 @@ const plusJakarta = Plus_Jakarta_Sans({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "Hệ thống chấm công VSM",
   description: "Hệ thống quản lý chấm công hiện đại cho doanh nghiệp",
-    generator: 'v0.dev'
+    generator: 'VSM',
+  applicationName: 'VSM Attendance System',
+  keywords: [
+    "VSM",
+    "attendance system",
+    "chấm công",
+    "quản lý nhân sự",
+    "doanh nghiệp",
+    "modern attendance",
+    "employee management"
+  ],
 }
 
 export default function RootLayout({

@@ -140,6 +140,14 @@ export default function LoginPage() {
         >
           <Card className="shadow-2xl border-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl">
             <CardHeader className="text-center pb-8">
+              {/* Logo công ty */}
+              <img
+                src="/logo/An Khang Real.png"
+                alt="An Khang Real Logo"
+                className="mx-auto mb-4 w-24 h-24 object-contain rounded-xl shadow"
+                draggable={false}
+              />
+             {/*
               <motion.div
                 initial={{ scale: 0, rotate: -180 }}
                 animate={{ scale: 1, rotate: 0 }}
@@ -159,7 +167,7 @@ export default function LoginPage() {
                 >
                   VSM
                 </motion.span>
-              </motion.div>
+              </motion.div> */}
 
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
                 <CardTitle className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">

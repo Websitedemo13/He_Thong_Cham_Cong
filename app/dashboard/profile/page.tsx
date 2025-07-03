@@ -41,7 +41,7 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false)
   const [showAvatarDialog, setShowAvatarDialog] = useState(false)
   const [avatarPreview, setAvatarPreview] = useState(null)
-  const fileInputRef = useRef(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [formData, setFormData] = useState({
     name: user?.name || "",
     email: user?.email || "",
@@ -73,8 +73,8 @@ export default function ProfilePage() {
     setIsEditing(false)
   }
 
-  const handleAvatarUpload = (event) => {
-    const file = event.target.files[0]
+  const handleAvatarUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
         toast({
@@ -96,7 +96,10 @@ export default function ProfilePage() {
 
       const reader = new FileReader()
       reader.onload = (e) => {
-        setAvatarPreview(e.target.result)
+        const result = (e.target as FileReader | null)?.result
+        if (typeof result === "string") {
+          setAvatarPreview(result)
+        }
       }
       reader.readAsDataURL(file)
     }
@@ -123,7 +126,7 @@ export default function ProfilePage() {
     })
   }
 
-  const getRoleLabel = (role) => {
+  const getRoleLabel = (role: string) => {
     switch (role) {
       case "admin":
         return "Quản trị viên"
@@ -136,7 +139,7 @@ export default function ProfilePage() {
     }
   }
 
-  const getRoleBadgeVariant = (role) => {
+  const getRoleBadgeVariant = (role: string) => {
     switch (role) {
       case "admin":
         return "destructive"

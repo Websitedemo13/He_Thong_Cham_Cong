@@ -35,7 +35,7 @@ export default function NotFound() {
             >
               <h1 className="text-3xl font-bold">Trang không tồn tại</h1>
               <p className="text-muted-foreground text-lg max-w-md mx-auto">
-                Rất tiếc, chúng tôi không thể tìm thấy trang bạn đang tìm kiếm. Có thể trang đã được di chuyển hoặc
+                Rất tiếc, chúng tôi không thể tìm thấy trang VSM hệ thống bạn đang tìm kiếm. Có thể trang đã được di chuyển hoặc
                 không còn tồn tại.
               </p>
             </motion.div>
