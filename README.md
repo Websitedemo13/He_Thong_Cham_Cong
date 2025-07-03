@@ -111,8 +111,8 @@
 ## 🧑‍💻 Cài đặt & khởi chạy
 
 ```bash
-git clone https://github.com/StephenSouth13/TIMEKEEPING-SYSTEM.git
-cd TIMEKEEPING-SYSTEM
+git clone https://github.com/StephenSouth13/He_Thong_Cham_Cong.git
+cd vsm-attendance-system 
 npm install
 npm run dev
 Truy cập tại: http://localhost:3000
