@@ -2,14 +2,18 @@
 
 import { motion } from "framer-motion"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/auth-context"
 import { getKPIData } from "@/lib/mock-data"
-import { Users, Clock, Calendar, TrendingUp, Building2, UserCheck, AlertCircle, CheckCircle } from "lucide-react"
+import { Users, Clock, Calendar, TrendingUp, Building2, UserCheck, AlertCircle, CheckCircle, MapPin } from "lucide-react"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
+import { QuickCheckIn } from "@/components/quick-checkin"
+import { useState } from "react"
 
 export default function DashboardPage() {
   const { user } = useAuth()
+  const [showQuickCheckIn, setShowQuickCheckIn] = useState(false)
 
   if (!user) return null
 
@@ -80,6 +84,17 @@ export default function DashboardPage() {
               {user.position}
             </Badge>
             <p className="text-sm opacity-75">Hệ thống VSM</p>
+            {(user.role === "staff" || user.role === "hr") && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setShowQuickCheckIn(true)}
+                className="mt-2 bg-white/20 hover:bg-white/30 text-white border-white/30"
+              >
+                <Clock className="h-4 w-4 mr-2" />
+                Chấm công nhanh
+              </Button>
+            )}
           </div>
         </div>
       </motion.div>
@@ -271,15 +286,15 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-3">
-              {user.role === "staff" && (
-                <Card className="p-4 hover:shadow-md transition-shadow cursor-pointer">
+              {(user.role === "staff" || user.role === "hr") && (
+                <Card className="p-4 hover:shadow-md transition-shadow cursor-pointer" onClick={() => setShowQuickCheckIn(true)}>
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-primary/10 rounded-lg">
                       <Clock className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <h3 className="font-semibold">Chấm công</h3>
-                      <p className="text-sm text-muted-foreground">Check-in/out</p>
+                      <h3 className="font-semibold">Chấm công nhanh</h3>
+                      <p className="text-sm text-muted-foreground">Check-in/out ngay</p>
                     </div>
                   </div>
                 </Card>
@@ -312,6 +327,12 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* Quick Check-in Component */}
+      <QuickCheckIn 
+        isVisible={showQuickCheckIn} 
+        onClose={() => setShowQuickCheckIn(false)} 
+      />
     </div>
   )
 }

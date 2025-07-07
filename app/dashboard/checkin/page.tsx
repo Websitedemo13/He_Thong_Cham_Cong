@@ -7,18 +7,58 @@ import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/contexts/auth-context"
 import { useState, useEffect } from "react"
 import { useToast } from "@/hooks/use-toast"
-import { MapPin, Clock, CheckCircle, XCircle, Calendar, Navigation, Wifi, Battery } from "lucide-react"
+import { MapPin, Clock, CheckCircle, XCircle, Calendar, Navigation, Wifi, Battery, AlertTriangle, Settings, Shield } from "lucide-react"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+
+// Mock company location settings
+const COMPANY_LOCATIONS = [
+  {
+    id: "main_office",
+    name: "Văn phòng chính VSM",
+    address: "123 Đường ABC, Quận 1, TP.HCM",
+    lat: 10.7769,
+    lng: 106.7009,
+    radius: 100, // meters
+    wifiSSIDs: ["VSM-Office", "VSM-Guest"],
+    isActive: true
+  },
+  {
+    id: "branch_office",
+    name: "Chi nhánh Hà Nội",
+    address: "456 Đường XYZ, Ba Đình, Hà Nội",
+    lat: 21.0285,
+    lng: 105.8542,
+    radius: 150,
+    wifiSSIDs: ["VSM-HN", "VSM-HN-Guest"],
+    isActive: true
+  }
+]
+
+// Mock admin settings
+const ADMIN_SETTINGS = {
+  requireLocationCheck: true,
+  requireWifiCheck: false,
+  allowRemoteCheckin: false,
+  strictMode: true
+}
 
 export default function CheckInPage() {
   const { user } = useAuth()
   const { toast } = useToast()
   const [currentTime, setCurrentTime] = useState("")
   const [currentDate, setCurrentDate] = useState("")
-  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null)
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null)
+  const [nearbyWifi, setNearbyWifi] = useState<string[]>([])
   const [isCheckedIn, setIsCheckedIn] = useState(false)
   const [checkInTime, setCheckInTime] = useState<string | null>(null)
   const [checkOutTime, setCheckOutTime] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [locationError, setLocationError] = useState<string | null>(null)
+  const [isInOfficeRange, setIsInOfficeRange] = useState(false)
+  const [nearestOffice, setNearestOffice] = useState<any>(null)
+  const [distance, setDistance] = useState<number | null>(null)
 
   useEffect(() => {
     const updateDateTime = () => {
@@ -44,28 +84,128 @@ export default function CheckInPage() {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          setLocation({
+          const userPos = {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
-          })
+          }
+          setUserLocation(userPos)
+          checkLocationValidity(userPos)
         },
         (error) => {
           console.error("Error getting location:", error)
-          toast({
-            title: "Không thể lấy vị trí",
-            description: "Vui lòng cho phép truy cập vị trí để chấm công",
-            variant: "destructive",
-          })
+          setLocationError("Không thể lấy vị trí. Vui lòng cho phép truy cập vị trí.")
+          if (ADMIN_SETTINGS.strictMode) {
+            toast({
+              title: "Lỗi vị trí",
+              description: "Không thể chấm công khi không xác định được vị trí",
+              variant: "destructive",
+            })
+          }
         },
       )
     }
-  }, [toast])
+
+    // Mock WiFi detection (in real app, this would use a native API)
+    detectNearbyWifi()
+  }, [])
+
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371e3 // Earth's radius in meters
+    const φ1 = lat1 * Math.PI/180
+    const φ2 = lat2 * Math.PI/180
+    const Δφ = (lat2-lat1) * Math.PI/180
+    const Δλ = (lon2-lon1) * Math.PI/180
+
+    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ/2) * Math.sin(Δλ/2)
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+
+    return R * c // Distance in meters
+  }
+
+  const checkLocationValidity = (userPos: { lat: number; lng: number }) => {
+    let minDistance = Infinity
+    let closestOffice = null
+
+    COMPANY_LOCATIONS.forEach(office => {
+      if (office.isActive) {
+        const dist = calculateDistance(userPos.lat, userPos.lng, office.lat, office.lng)
+        if (dist < minDistance) {
+          minDistance = dist
+          closestOffice = office
+        }
+      }
+    })
+
+    setDistance(Math.round(minDistance))
+    setNearestOffice(closestOffice)
+    
+    if (closestOffice && minDistance <= closestOffice.radius) {
+      setIsInOfficeRange(true)
+    } else {
+      setIsInOfficeRange(false)
+    }
+  }
+
+  const detectNearbyWifi = () => {
+    // Mock WiFi detection - in real app this would use native APIs
+    // For demo purposes, randomly detect company WiFi
+    const mockWifiNetworks = ["VSM-Office", "VSM-Guest", "Other-Network", "Home-WiFi"]
+    const detectedNetworks = mockWifiNetworks.filter(() => Math.random() > 0.7)
+    setNearbyWifi(detectedNetworks)
+  }
+
+  const isWifiValid = () => {
+    if (!ADMIN_SETTINGS.requireWifiCheck) return true
+    
+    const companyWifis = COMPANY_LOCATIONS.flatMap(office => office.wifiSSIDs)
+    return nearbyWifi.some(wifi => companyWifis.includes(wifi))
+  }
+
+  const canCheckIn = () => {
+    if (!ADMIN_SETTINGS.requireLocationCheck && !ADMIN_SETTINGS.requireWifiCheck) {
+      return true // No restrictions
+    }
+
+    if (ADMIN_SETTINGS.allowRemoteCheckin) {
+      return true // Remote work allowed
+    }
+
+    const locationValid = !ADMIN_SETTINGS.requireLocationCheck || isInOfficeRange
+    const wifiValid = !ADMIN_SETTINGS.requireWifiCheck || isWifiValid()
+
+    return locationValid && wifiValid
+  }
+
+  const getCheckInBlockReason = () => {
+    if (!ADMIN_SETTINGS.requireLocationCheck && !ADMIN_SETTINGS.requireWifiCheck) {
+      return null
+    }
+
+    if (ADMIN_SETTINGS.allowRemoteCheckin) {
+      return null
+    }
+
+    const reasons = []
+    
+    if (ADMIN_SETTINGS.requireLocationCheck && !isInOfficeRange) {
+      reasons.push(`Bạn đang ở cách văn phòng ${distance}m (cho phép: ${nearestOffice?.radius || 100}m)`)
+    }
+    
+    if (ADMIN_SETTINGS.requireWifiCheck && !isWifiValid()) {
+      reasons.push("Không kết nối WiFi công ty")
+    }
+
+    return reasons.length > 0 ? reasons : null
+  }
 
   const handleCheckIn = async () => {
-    if (!location) {
+    if (!canCheckIn()) {
+      const reasons = getCheckInBlockReason()
       toast({
-        title: "Lỗi vị trí",
-        description: "Không thể xác định vị trí hiện tại",
+        title: "Không thể chấm công",
+        description: reasons?.join(", ") || "Không đáp ứng điều kiện chấm công",
         variant: "destructive",
       })
       return
@@ -117,11 +257,13 @@ export default function CheckInPage() {
     )
   }
 
+  const blockReasons = getCheckInBlockReason()
+
   return (
     <div className="space-y-6">
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="text-center">
-        <h1 className="text-3xl font-bold mb-2">Chấm công</h1>
-        <p className="text-muted-foreground">Ghi nhận thời gian làm việc của bạn</p>
+        <h1 className="text-3xl font-bold mb-2">Chấm công thông minh</h1>
+        <p className="text-muted-foreground">Ghi nhận thời gian làm việc với xác thực vị trí</p>
       </motion.div>
 
       {/* Current Time Display */}
@@ -134,9 +276,101 @@ export default function CheckInPage() {
         </Card>
       </motion.div>
 
+      {/* Location & Security Status */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              Trạng thái bảo mật chấm công
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Location Status */}
+            <div className="flex items-center justify-between p-3 rounded-lg border">
+              <div className="flex items-center gap-3">
+                <MapPin className={`h-5 w-5 ${isInOfficeRange ? 'text-green-600' : 'text-red-600'}`} />
+                <div>
+                  <p className="font-medium">Vị trí</p>
+                  <p className="text-sm text-muted-foreground">
+                    {nearestOffice ? nearestOffice.name : "Không xác định"}
+                  </p>
+                </div>
+              </div>
+              <div className="text-right">
+                <Badge variant={isInOfficeRange ? "default" : "destructive"}>
+                  {isInOfficeRange ? "Trong phạm vi" : `Cách ${distance}m`}
+                </Badge>
+                {distance && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Cho phép: {nearestOffice?.radius || 100}m
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* WiFi Status */}
+            <div className="flex items-center justify-between p-3 rounded-lg border">
+              <div className="flex items-center gap-3">
+                <Wifi className={`h-5 w-5 ${isWifiValid() ? 'text-green-600' : 'text-orange-600'}`} />
+                <div>
+                  <p className="font-medium">WiFi</p>
+                  <p className="text-sm text-muted-foreground">
+                    {nearbyWifi.length > 0 ? `${nearbyWifi.length} mạng phát hiện` : "Không phát hiện"}
+                  </p>
+                </div>
+              </div>
+              <Badge variant={isWifiValid() ? "default" : "secondary"}>
+                {isWifiValid() ? "Hợp lệ" : "Không yêu cầu"}
+              </Badge>
+            </div>
+
+            {/* Admin Settings Display */}
+            <div className="p-3 bg-muted/50 rounded-lg">
+              <p className="text-sm font-medium mb-2">Cài đặt chấm công:</p>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${ADMIN_SETTINGS.requireLocationCheck ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                  <span>Kiểm tra vị trí</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${ADMIN_SETTINGS.requireWifiCheck ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                  <span>Kiểm tra WiFi</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${ADMIN_SETTINGS.allowRemoteCheckin ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                  <span>Làm việc từ xa</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${ADMIN_SETTINGS.strictMode ? 'bg-red-500' : 'bg-gray-400'}`}></div>
+                  <span>Chế độ nghiêm ngặt</span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Warning if can't check in */}
+      {blockReasons && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Không thể chấm công:</strong>
+              <ul className="mt-2 list-disc list-inside">
+                {blockReasons.map((reason, index) => (
+                  <li key={index}>{reason}</li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
+        </motion.div>
+      )}
+
       <div className="grid gap-6 md:grid-cols-2">
         {/* Check-in/out Actions */}
-        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}>
+        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 }}>
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -149,7 +383,7 @@ export default function CheckInPage() {
               {!isCheckedIn ? (
                 <Button
                   onClick={handleCheckIn}
-                  disabled={isLoading || !location}
+                  disabled={isLoading || !canCheckIn()}
                   size="lg"
                   className="w-full h-16 text-lg"
                 >
@@ -215,11 +449,11 @@ export default function CheckInPage() {
           </Card>
         </motion.div>
 
-        {/* Location & Status */}
+        {/* Location Details */}
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.3 }}
+          transition={{ delay: 0.5 }}
           className="space-y-6"
         >
           {/* Location Card */}
@@ -227,26 +461,34 @@ export default function CheckInPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MapPin className="h-5 w-5" />
-                Vị trí hiện tại
+                Chi tiết vị trí
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {location ? (
+              {userLocation ? (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 text-sm">
                     <Navigation className="h-4 w-4 text-green-600" />
                     <span className="text-green-600 font-medium">Đã xác định vị trí</span>
                   </div>
-                  <div className="text-sm text-muted-foreground">
-                    <p>Lat: {location.lat.toFixed(6)}</p>
-                    <p>Lng: {location.lng.toFixed(6)}</p>
-                    <p className="mt-2 font-medium">📍 Văn phòng VSM</p>
+                  <div className="text-sm text-muted-foreground space-y-1">
+                    <p><strong>Vị trí hiện tại:</strong></p>
+                    <p>Lat: {userLocation.lat.toFixed(6)}</p>
+                    <p>Lng: {userLocation.lng.toFixed(6)}</p>
+                    {nearestOffice && (
+                      <>
+                        <p className="mt-2"><strong>Văn phòng gần nhất:</strong></p>
+                        <p>📍 {nearestOffice.name}</p>
+                        <p className="text-xs">{nearestOffice.address}</p>
+                        <p className="text-xs">Khoảng cách: {distance}m</p>
+                      </>
+                    )}
                   </div>
                 </div>
               ) : (
                 <div className="flex items-center gap-2 text-sm text-orange-600">
                   <MapPin className="h-4 w-4" />
-                  <span>Đang xác định vị trí...</span>
+                  <span>{locationError || "Đang xác định vị trí..."}</span>
                 </div>
               )}
             </CardContent>
@@ -274,7 +516,7 @@ export default function CheckInPage() {
                   <span className="text-sm">GPS</span>
                 </div>
                 <Badge variant="outline" className="text-blue-600">
-                  Hoạt động
+                  {userLocation ? "Hoạt động" : "Đang kết nối"}
                 </Badge>
               </div>
 
@@ -287,13 +529,23 @@ export default function CheckInPage() {
                   Chính xác
                 </Badge>
               </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-orange-600" />
+                  <span className="text-sm">Bảo mật</span>
+                </div>
+                <Badge variant="outline" className="text-orange-600">
+                  {canCheckIn() ? "Đạt yêu cầu" : "Không đạt"}
+                </Badge>
+              </div>
             </CardContent>
           </Card>
         </motion.div>
       </div>
 
       {/* Today's Summary */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
