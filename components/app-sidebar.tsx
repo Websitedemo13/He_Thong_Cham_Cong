@@ -15,6 +15,11 @@ import {
   UserCheck,
   MapPin,
   PieChart,
+  DollarSign,
+  Target,
+  Bell,
+  Brain,
+  TrendingUp,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -48,6 +53,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         url: "/dashboard/profile",
         icon: Users,
       },
+      {
+        title: "Thông báo",
+        url: "/dashboard/notifications",
+        icon: Bell,
+      },
     ]
 
     if (user.role === "admin") {
@@ -67,6 +77,21 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           title: "Bảng công toàn bộ",
           url: "/dashboard/attendance",
           icon: Clock,
+        },
+        {
+          title: "Quản lý lương",
+          url: "/dashboard/payroll",
+          icon: DollarSign,
+        },
+        {
+          title: "Quản lý hiệu suất",
+          url: "/dashboard/performance",
+          icon: Target,
+        },
+        {
+          title: "Analytics & AI",
+          url: "/dashboard/analytics",
+          icon: Brain,
         },
         {
           title: "Lịch hệ thống",
@@ -103,6 +128,21 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           icon: FileText,
         },
         {
+          title: "Quản lý lương",
+          url: "/dashboard/payroll",
+          icon: DollarSign,
+        },
+        {
+          title: "Quản lý hiệu suất",
+          url: "/dashboard/performance",
+          icon: Target,
+        },
+        {
+          title: "Analytics",
+          url: "/dashboard/analytics",
+          icon: TrendingUp,
+        },
+        {
           title: "Lịch chung",
           url: "/dashboard/calendar",
           icon: Calendar,
@@ -135,6 +175,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           title: "Xin nghỉ phép",
           url: "/dashboard/leave-request",
           icon: FileText,
+        },
+        {
+          title: "Hiệu suất cá nhân",
+          url: "/dashboard/performance",
+          icon: Target,
         },
         {
           title: "Lịch cá nhân",
